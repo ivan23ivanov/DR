@@ -1,6 +1,6 @@
 # Дипломна работа на Иван Иванов 12 Г клас
  BASS - Bulgarian Automated Smart Sonar, IoT сонар-асистент на риболовеца
-![bass logo](https://github.com/ivan23ivanov/DR/assets/102676564/447cff0b-faca-4335-94c1-2760d4893db6)
+![bass logo](https://github.com/ivan23ivanov/DR/assets/102676564/447cff0b-faca-4335-94c1-2760d4893db6 | width=50)
 
 ## Съдържание:
 
