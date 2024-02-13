@@ -1,0 +1,32 @@
+#include <Arduino.h>
+
+#define TRIG_PIN 2
+#define ECHO_PIN 3
+
+void setup() {
+  //JSN-SR04
+  Serial.begin(115200);
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+}
+
+void loop() {
+  //JSN-SR04T
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+  long duration = pulseIn(ECHO_PIN, HIGH);
+  float distance = duration * 0.1482 / 2;
+
+  if (distance == 0.00) {
+    Serial.println("JSN-SR04T is powered off.");
+  }
+  else {
+    Serial.print("Depth: ");
+    Serial.print(distance);
+    Serial.println("cm");
+  }
+  delay(1000);
+}
