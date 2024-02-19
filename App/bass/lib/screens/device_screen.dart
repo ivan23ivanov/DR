@@ -5,9 +5,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../utils/extra.dart';
 import '../utils/snackbar.dart';
-import '../widgets/characteristic_tile.dart';
-import '../widgets/descriptor_tile.dart';
-import '../widgets/service_tile.dart';
+import '../widgets/raw_data_page.dart';
 
 class DeviceScreen extends StatefulWidget {
   final BluetoothDevice device;
@@ -18,31 +16,34 @@ class DeviceScreen extends StatefulWidget {
   State<DeviceScreen> createState() => _DeviceScreenState();
 }
 
-class _DeviceScreenState extends State<DeviceScreen> {
+class _DeviceScreenState extends State<DeviceScreen>
+    with TickerProviderStateMixin {
   int? _rssi;
-  int? _mtuSize;
   BluetoothConnectionState _connectionState =
       BluetoothConnectionState.disconnected;
-  List<BluetoothService> _services = [];
-  bool _isDiscoveringServices = false;
+  late Future<BluetoothService> _service;
   bool _isConnecting = false;
   bool _isDisconnecting = false;
 
+  late final TabController _tabController;
   late StreamSubscription<BluetoothConnectionState>
       _connectionStateSubscription;
   late StreamSubscription<bool> _isConnectingSubscription;
   late StreamSubscription<bool> _isDisconnectingSubscription;
   late StreamSubscription<int> _mtuSubscription;
 
+  static const String BASSServiceUUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
 
     _connectionStateSubscription =
         widget.device.connectionState.listen((state) async {
       _connectionState = state;
       if (state == BluetoothConnectionState.connected) {
-        _services = []; // must rediscover services
+        _service = discoverServices(); // must rediscover services
       }
       if (state == BluetoothConnectionState.connected && _rssi == null) {
         _rssi = await widget.device.readRssi();
@@ -53,7 +54,6 @@ class _DeviceScreenState extends State<DeviceScreen> {
     });
 
     _mtuSubscription = widget.device.mtu.listen((value) {
-      _mtuSize = value;
       if (mounted) {
         setState(() {});
       }
@@ -122,23 +122,15 @@ class _DeviceScreenState extends State<DeviceScreen> {
     }
   }
 
-  Future onDiscoverServicesPressed() async {
-    if (mounted) {
-      setState(() {
-        _isDiscoveringServices = true;
-      });
-    }
+  Future<BluetoothService> discoverServices() async {
     try {
-      _services = await widget.device.discoverServices();
-      Snackbar.show(ABC.c, "Discover Services: Success", success: true);
+      List<BluetoothService> services = await widget.device.discoverServices();
+      return services
+          .firstWhere((BluetoothService e) => e.uuid.str == BASSServiceUUID);
     } catch (e) {
       Snackbar.show(ABC.c, prettyException("Discover Services Error:", e),
           success: false);
-    }
-    if (mounted) {
-      setState(() {
-        _isDiscoveringServices = false;
-      });
+      return Future.error(e);
     }
   }
 
@@ -150,27 +142,6 @@ class _DeviceScreenState extends State<DeviceScreen> {
       Snackbar.show(ABC.c, prettyException("Change Mtu Error:", e),
           success: false);
     }
-  }
-
-  List<Widget> _buildServiceTiles(BuildContext context, BluetoothDevice d) {
-    return _services
-        .map(
-          (s) => ServiceTile(
-            service: s,
-            characteristicTiles: s.characteristics
-                .map((c) => _buildCharacteristicTile(c))
-                .toList(),
-          ),
-        )
-        .toList();
-  }
-
-  CharacteristicTile _buildCharacteristicTile(BluetoothCharacteristic c) {
-    return CharacteristicTile(
-      characteristic: c,
-      descriptorTiles:
-          c.descriptors.map((d) => DescriptorTile(descriptor: d)).toList(),
-    );
   }
 
   Widget buildSpinner(BuildContext context) {
@@ -186,13 +157,6 @@ class _DeviceScreenState extends State<DeviceScreen> {
     );
   }
 
-  Widget buildRemoteId(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Text('${widget.device.remoteId}'),
-    );
-  }
-
   Widget buildRssiTile(BuildContext context) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -204,38 +168,6 @@ class _DeviceScreenState extends State<DeviceScreen> {
             style: Theme.of(context).textTheme.bodySmall)
       ],
     );
-  }
-
-  Widget buildGetServices(BuildContext context) {
-    return IndexedStack(
-      index: (_isDiscoveringServices) ? 1 : 0,
-      children: <Widget>[
-        TextButton(
-          onPressed: onDiscoverServicesPressed,
-          child: const Text("Get Services"),
-        ),
-        const IconButton(
-          icon: SizedBox(
-            width: 18.0,
-            height: 18.0,
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation(Colors.grey),
-            ),
-          ),
-          onPressed: null,
-        )
-      ],
-    );
-  }
-
-  Widget buildMtuTile(BuildContext context) {
-    return ListTile(
-        title: const Text('MTU Size'),
-        subtitle: Text('$_mtuSize bytes'),
-        trailing: IconButton(
-          icon: const Icon(Icons.edit),
-          onPressed: onRequestMtuPressed,
-        ));
   }
 
   Widget buildConnectButton(BuildContext context) {
@@ -257,28 +189,64 @@ class _DeviceScreenState extends State<DeviceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ScaffoldMessenger(
-      key: Snackbar.snackBarKeyC,
-      child: Scaffold(
-        appBar: AppBar(
+    return Scaffold(
+      appBar: AppBar(
           title: Text(widget.device.platformName),
           actions: [buildConnectButton(context)],
-        ),
-        body: SingleChildScrollView(
-          child: Column(
-            children: <Widget>[
-              buildRemoteId(context),
-              ListTile(
-                leading: buildRssiTile(context),
-                title: Text(
-                    'Device is ${_connectionState.toString().split('.')[1]}.'),
-                trailing: buildGetServices(context),
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(
+                icon: Icon(Icons.how_to_reg_rounded),
               ),
-              buildMtuTile(context),
-              ..._buildServiceTiles(context, widget.device),
+              Tab(
+                icon: Icon(Icons.data_exploration_outlined),
+              ),
             ],
-          ),
-        ),
+          )),
+      body: FutureBuilder<BluetoothService>(
+        future: _service,
+        builder:
+            (BuildContext context, AsyncSnapshot<BluetoothService> snapshot) {
+          if (snapshot.hasData) {
+            final BluetoothService mtuService = snapshot.data!;
+            return TabBarView(
+              controller: _tabController,
+              children: [
+                SingleChildScrollView(
+                  child: Column(
+                    children: <Widget>[
+                      ListTile(
+                        leading: buildRssiTile(context),
+                        title: Text(
+                            'BASS is ${_connectionState.toString().split('.')[1]}.'),
+                      ),
+                      // AssistantPage(
+                      //     characteristic: mtuService.characteristics.first)
+                    ],
+                  ),
+                ),
+                SingleChildScrollView(
+                  child: Column(
+                    children: <Widget>[
+                      ListTile(
+                        leading: buildRssiTile(context),
+                        title: Text(
+                            'BASS is ${_connectionState.toString().split('.')[1]}.'),
+                      ),
+                      RawPage(characteristic: mtuService.characteristics.first)
+                    ],
+                  ),
+                ),
+              ],
+            );
+          } else if (snapshot.hasError) {
+            return const Center(
+                child: Text("TODO HANDLE APP REFRESH BUTTON")); //TODO
+          } else {
+            return const CircularProgressIndicator();
+          }
+        },
       ),
     );
   }
