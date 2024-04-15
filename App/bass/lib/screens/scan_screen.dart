@@ -4,12 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../utils/extra.dart';
-import '../utils/snackbar.dart';
 import '../widgets/scan_result_tile.dart';
 import '../widgets/system_device_tile.dart';
 import 'device_screen.dart';
 
-const String bassMAC = "D4:F9:8D:04:27:CA";
+const String bassMAC = "54:32:04:87:54:F2";
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({Key? key}) : super(key: key);
@@ -37,9 +36,7 @@ class _ScanScreenState extends State<ScanScreen> {
       if (mounted) {
         setState(() {});
       }
-    }, onError: (e) {
-      Snackbar.show(ABC.b, prettyException("Scan Error:", e), success: false);
-    });
+    }, onError: (e) {});
 
     _isScanningSubscription = FlutterBluePlus.isScanning.listen((state) {
       _isScanning = state;
@@ -63,14 +60,12 @@ class _ScanScreenState extends State<ScanScreen> {
           .where((BluetoothDevice e) => e.remoteId.str == bassMAC)
           .toList();
     } catch (e) {
-      Snackbar.show(ABC.b, prettyException("System Devices Error:", e),
-          success: false);
+      rethrow;
     }
     try {
       await FlutterBluePlus.startScan(timeout: const Duration(seconds: 15));
     } catch (e) {
-      Snackbar.show(ABC.b, prettyException("Start Scan Error:", e),
-          success: false);
+      rethrow;
     }
     if (mounted) {
       setState(() {});
@@ -81,15 +76,13 @@ class _ScanScreenState extends State<ScanScreen> {
     try {
       FlutterBluePlus.stopScan();
     } catch (e) {
-      Snackbar.show(ABC.b, prettyException("Stop Scan Error:", e),
-          success: false);
+      rethrow;
     }
   }
 
   void onConnectPressed(BluetoothDevice device) {
     device.connectAndUpdateStream().catchError((e) {
-      Snackbar.show(ABC.c, prettyException("Connect Error:", e),
-          success: false);
+      throw e;
     });
     MaterialPageRoute route = MaterialPageRoute(
         builder: (context) => DeviceScreen(device: device),
@@ -150,23 +143,20 @@ class _ScanScreenState extends State<ScanScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ScaffoldMessenger(
-      key: Snackbar.snackBarKeyB,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Find a BASS'),
-        ),
-        body: RefreshIndicator(
-          onRefresh: onRefresh,
-          child: ListView(
-            children: <Widget>[
-              ..._buildSystemDeviceTiles(context),
-              ..._buildScanResultTiles(context),
-            ],
-          ),
-        ),
-        floatingActionButton: buildScanButton(context),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Find a BASS'),
       ),
+      body: RefreshIndicator(
+        onRefresh: onRefresh,
+        child: ListView(
+          children: <Widget>[
+            ..._buildSystemDeviceTiles(context),
+            ..._buildScanResultTiles(context),
+          ],
+        ),
+      ),
+      floatingActionButton: buildScanButton(context),
     );
   }
 }

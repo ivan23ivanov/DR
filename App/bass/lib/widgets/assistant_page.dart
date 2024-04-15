@@ -1,22 +1,16 @@
-import 'dart:async';
-
 import 'package:bass/utils/assistant.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 class AssistantPage extends StatefulWidget {
-  final BluetoothCharacteristic characteristic;
+  List<int> data;
 
-  const AssistantPage({Key? key, required this.characteristic})
-      : super(key: key);
+  AssistantPage({Key? key, required this.data}) : super(key: key);
 
   @override
   State<AssistantPage> createState() => _AssistantPageState();
 }
 
 class _AssistantPageState extends State<AssistantPage> {
-  List<int> _value = [];
-
   String waterTemp = "";
   String waterTempMessage = "";
   String airTemp = "";
@@ -26,51 +20,13 @@ class _AssistantPageState extends State<AssistantPage> {
   String depth = "";
   String depthMessage = "";
 
-  late StreamSubscription<List<int>> _lastValueSubscription;
-  bool subscribed = false;
-
   static const String depthString = "Depth:";
   static const String airTString = "Air T:";
   static const String waterTString = "Water T:";
   static const String pressureString = "Press.:";
 
-  @override
-  void initState() {
-    super.initState();
-    subscribe().then((value) {
-      subscribed = true;
-      if (mounted) {
-        setState(() {});
-      }
-    });
-    _lastValueSubscription =
-        widget.characteristic.lastValueStream.listen((value) {
-      _value = value;
-      if (mounted) {
-        setState(() {});
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _lastValueSubscription.cancel();
-    super.dispose();
-  }
-
-  BluetoothCharacteristic get c => widget.characteristic;
-
-  Future<void> subscribe() async {
-    try {
-      await c.setNotifyValue(c.isNotifying == false);
-      await c.read();
-    } catch (e) {
-      return Future.error(e);
-    }
-  }
-
   void buildValue(BuildContext context) {
-    String data = String.fromCharCodes(_value);
+    String data = String.fromCharCodes(widget.data);
     if (data.contains(depthString)) {
       depth = data;
       depthMessage =
@@ -100,18 +56,16 @@ class _AssistantPageState extends State<AssistantPage> {
   @override
   Widget build(BuildContext context) {
     buildValue(context);
-    return subscribed
-        ? Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const Text('Асистентът препоръчва:'),
-              Text(depthMessage),
-              Text(airTempMessage),
-              Text(waterTempMessage),
-              Text(pressureMessage),
-            ],
-          )
-        : const CircularProgressIndicator();
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text('Асистентът препоръчва:'),
+        Text(depthMessage),
+        Text(airTempMessage),
+        Text(waterTempMessage),
+        Text(pressureMessage),
+      ],
+    );
   }
 }

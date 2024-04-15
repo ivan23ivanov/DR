@@ -3,8 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
-import '../utils/snackbar.dart';
-
 class BluetoothOffScreen extends StatelessWidget {
   const BluetoothOffScreen({Key? key, this.adapterState}) : super(key: key);
 
@@ -21,8 +19,11 @@ class BluetoothOffScreen extends StatelessWidget {
   Widget buildTitle(BuildContext context) {
     String? state = adapterState?.toString().split(".").last;
     return Text(
-      'Bluetooth Adapter is ${state != null ? state : 'not available'}',
-      style: Theme.of(context).primaryTextTheme.titleSmall?.copyWith(color: Colors.white),
+      'Bluetooth Adapter is ${state ?? 'not available'}',
+      style: Theme.of(context)
+          .primaryTextTheme
+          .titleSmall
+          ?.copyWith(color: Colors.white),
     );
   }
 
@@ -37,7 +38,7 @@ class BluetoothOffScreen extends StatelessWidget {
               await FlutterBluePlus.turnOn();
             }
           } catch (e) {
-            Snackbar.show(ABC.a, prettyException("Error Turning On:", e), success: false);
+            rethrow;
           }
         },
       ),
@@ -46,19 +47,16 @@ class BluetoothOffScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ScaffoldMessenger(
-      key: Snackbar.snackBarKeyA,
-      child: Scaffold(
-        backgroundColor: Colors.lightBlue,
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              buildBluetoothOffIcon(context),
-              buildTitle(context),
-              if (Platform.isAndroid) buildTurnOnButton(context),
-            ],
-          ),
+    return Scaffold(
+      backgroundColor: Colors.lightBlue,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            buildBluetoothOffIcon(context),
+            buildTitle(context),
+            if (Platform.isAndroid) buildTurnOnButton(context),
+          ],
         ),
       ),
     );
