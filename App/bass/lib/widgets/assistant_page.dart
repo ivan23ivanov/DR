@@ -56,16 +56,19 @@ class _AssistantPageState extends State<AssistantPage> {
   @override
   Widget build(BuildContext context) {
     buildValue(context);
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        const Text('Асистентът препоръчва:'),
-        Text(depthMessage),
-        Text(airTempMessage),
-        Text(waterTempMessage),
-        Text(pressureMessage),
-      ],
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Text('Асистентът препоръчва:'),
+          Text(depthMessage),
+          Text(airTempMessage),
+          Text(waterTempMessage),
+          Text(pressureMessage),
+        ],
+      ),
     );
   }
 }
